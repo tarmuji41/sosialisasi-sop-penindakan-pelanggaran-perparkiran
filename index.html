@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Presentasi SOP Perparkiran Kota Malang - Podcast Style</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height untuk mobile browser */
+            user-select: none;
+            touch-action: pan-y; /* Izinkan scroll vertikal, tangani swipe horizontal di JS */
+        }
+
+        .slide-container {
+            position: relative;
+            width: 100%;
+            height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 90px; /* Ruang aman untuk audio player di mobile */
+        }
+
+        .slide {
+            position: absolute;
+            width: 90%;
+            max-width: 800px;
+            height: auto;
+            max-height: calc(100dvh - 110px); /* Sisa tinggi setelah dikurangi padding & audio */
+            overflow-y: auto; /* Scroll jika konten terlalu panjang di HP kecil */
+            overflow-x: hidden;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.98);
+            transition: opacity 0.5s ease, visibility 0.5s ease, transform 0.5s ease;
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Sembunyikan scrollbar tapi tetap bisa scroll */
+        .slide::-webkit-scrollbar { width: 4px; }
+        .slide::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 4px;
+        }
+        .slide::-webkit-scrollbar-track { background: transparent; }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .slide .text-content {
+            flex: 0 1 auto;
+            width: 100%;
+        }
+
+        .slide img.slide-image {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            max-height: 45dvh; /* Batas aman agar tidak mendorong teks keluar */
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,0.2); /* Latar belakang gelap transparan jika gambar ada ruang kosong */
+        }
+
+        /* Tipografi Fluid (Clamp) untuk responsivitas halus */
+        h1 { font-size: clamp(1.4rem, 5vw, 2.8rem); color: #a78bfa; margin-bottom: 12px; line-height: 1.2; }
+        h2 { font-size: clamp(1.2rem, 4.5vw, 2.2rem); color: #c4b5fd; margin-bottom: 12px; line-height: 1.3; }
+        p  { font-size: clamp(0.95rem, 3vw, 1.45rem); color: #e2e8f0; margin-bottom: 10px; line-height: 1.5; }
+        strong { color: #fff; font-weight: 700; }
+
+        .analogi-box {
+            background: rgba(139, 92, 246, 0.12);
+            border-left: 4px solid #8b5cf6;
+            padding: 12px 16px;
+            margin-top: 12px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: clamp(0.85rem, 2.8vw, 1.2rem);
+            color: #f1f5f9;
+            font-style: italic;
+            width: 100%;
+        }
+
+        /* Progress bar */
+        .progress-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            z-index: 20;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+        }
+
+        /* Audio Player - Dioptimalkan untuk Mobile */
+        .audio-player-container {
+            position: fixed;
+            bottom: 16px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 30;
+            padding: 0 12px;
+            pointer-events: none; /* Agar area kosong tidak memblokir sentuhan */
+        }
+
+        audio {
+            width: 100%;
+            max-width: 600px;
+            height: 48px; /* Tinggi yang nyaman untuk sentuhan */
+            border-radius: 24px;
+            outline: none;
+            filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.4));
+            pointer-events: auto; /* Kembalikan interaksi ke elemen audio */
+            background: #1e293b;
+        }
+
+        /* Overlay Mulai */
+        .start-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.97);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+            padding: 20px;
+        }
+
+        .start-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .start-overlay img {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #start-btn {
+            padding: 18px 40px;
+            font-size: clamp(1.1rem, 4vw, 1.5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: 100%;
+            max-width: 320px;
+            touch-action: manipulation;
+        }
+
+        #start-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Petunjuk Navigasi */
+        .nav-hint {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            font-size: 0.8rem;
+            color: rgba(226, 232, 240, 0.4);
+            z-index: 9;
+            background: rgba(0,0,0,0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .swipe-hint {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.85rem;
+            color: rgba(167, 139, 250, 0.8);
+            z-index: 9;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Responsif Khusus Android / Mobile */
+        @media (max-width: 768px) {
+            .slide {
+                width: 92%;
+                padding: 20px 16px;
+                gap: 12px;
+                max-height: calc(100dvh - 100px);
+            }
+            
+            .slide img.slide-image {
+                max-height: 40dvh; /* Lebih banyak ruang untuk teks di HP */
+            }
+
+            .nav-hint { display: none; }
+            .swipe-hint { display: block; } /* Tampilkan petunjuk swipe di HP */
+            
+            .analogi-box {
+                padding: 10px 14px;
+                border-left-width: 3px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .slide { padding: 16px 12px; }
+            .slide img.slide-image { max-height: 35dvh; }
+        }
+
+        /* Mode Landscape di HP */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .slide-container { padding-bottom: 70px; }
+            .slide { 
+                max-height: calc(100dvh - 80px); 
+                flex-direction: row; /* Side-by-side di landscape jika memungkinkan */
+                align-items: flex-start;
+                text-align: left;
+                overflow-y: auto;
+            }
+            .slide .text-content { flex: 1; padding-right: 16px; }
+            .slide img.slide-image { flex: 1; max-height: 80dvh; max-width: 50%; }
+            .analogi-box { margin-top: 8px; }
+            .swipe-hint { bottom: 60px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-indicator">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+
+    <div id="start-overlay" class="start-overlay">
+        <img src="https://lh3.googleusercontent.com/pw/AP1GczPvOGdrpf5JDtWh6HGWL6GQ-Bc1H3YHgv4YONKa5kjYbAr1RBOMeoyuu2x3aSjRCez7AbuOQ7tlFeI8BpClgJdgNwRDPGHQBRYUGIqvsTfjsaKLXMb6MvJA_wz-kxTxh7G6vMa4bfAk1r7tR9xNqcYA=w1123-h632-s-no-gm?authuser=0" alt="Cover Presentasi">
+        <button id="start-btn">▶ Mulai</button>
+    </div>
+
+    <div class="slide-container" id="slide-container">
+        <!-- SLIDE 1 -->
+        <div class="slide active">
+            <div class="text-content">
+                <h1>Sebuah Pengalaman Sosiologis di Ruang Perkotaan</h1>
+                <p>Selamat datang di bedah mendalam <strong>SOP Penindakan Pelanggaran Perparkiran</strong> Dinas Perhubungan Kota Malang. Penegakan hukum yang tegas, transparan, dan bersih dari intervensi wewenang.</p>
+            </div>
+            <img src="https://lh3.googleusercontent.com/pw/AP1GczNgS8ueJ6-f3h8gYy1-x-D64cnytc9B_SC-bbIWHYAfoUyj90qYrWg5ys8hKuNNWOh0fEBbuvf4f_BhASPLBg58hZ_H503wvACCY9MY_vgxlJaPmFQfiPeOEfRw7f9S0AravmoFoSYWFmBhWsyJRmd-=w1408-h768-s-no-gm?authuser=0" class="slide-image" alt="Ilustrasi Parkir">
+        </div>
+
+        <!-- SLIDE 2 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Melawan Fenomena "Jukir Hantu"</h2>
+            </div>
+            <img src="https://lh3.googleusercontent.com/pw/AP1GczP6tP312mbeEAHwZgyFYZfCfxistNjmlKp3TFck7SUaqpqxPypEOQs7SPbxNQS8rcxp3xkDXLsPsRB1bzpvNGyTiVviT-X9gEaJTG0jREEB5GlKt5asvVFtDSBCxKwd41MZv56GP_4LKwKMDqlR57IW=w1123-h629-s-no-gm?authuser=0" class="slide-image" alt="Jukir Hantu">
+        </div>
+
+        <!-- SLIDE 3 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Otoritas Datang dari Sistem, Bukan Seragam!</h2>
+               <img src="https://lh3.googleusercontent.com/pw/AP1GczPUL-mIkHg1RuHUS2seWjU3OjKQmwFY4pa9TAIGz3SmbpPTQ9T35pdBAQi6-JZvABIy4k0Bqaetqm15A8bOEX5-5ujEQMSk4lz3yc9fpVM3h4TG30Gz7jGT9fDOn8E0zBvle8_uRqTNFtvmJkzFfZhJ=w1123-h631-s-no-gm?authuser=0" class="slide-image">
+                <div class="analogi-box">
+                    🎙️ <em>"Pendekatan awal wajib humanis dan persuasif untuk mengedukasi warga, namun ketegasan hukum tidak boleh ditawar jika aturan diabaikan."</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4 -->
+        <div class="slide">
+            <div class="text-content">
+                <img src="https://lh3.googleusercontent.com/pw/AP1GczOOB33FRZ7yGRmd_1Kv3pb9RZPYprHYAfSOrJMJ78H8Xd6TRAEtQXZp2tAO1TrJcfTypDApaKu3vd0cGP-nO-SxIBRuIqrgdDCpR1a95nIFqpjMe0ZTdIH9ofpI7u0qubpIkcu5sdIE2a3I8CVFa_-B=w1123-h632-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+
+        <!-- SLIDE 5 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Pemberantasan Oknum vs Premanisme Jalanan</h2>
+                <img src="https://lh3.googleusercontent.com/pw/AP1GczO6qjsfuuOxnmflMarXVuk5iDOw2BC0ijkF2TfVWbxUmSXNFqGGiRlOHdgpD5bZtpQc_d1_G4_hKnoyMhr858Jd-CqfM5XHIkD5-p7UdRU6nXlGctsNzUgTNeB8o_meVJ2McNYT1in-np4l6x6O5uEd=w1123-h628-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+
+        <!-- SLIDE 6 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Pemilik Usaha Bukan Pengecualian</h2>
+                <img src="https://lh3.googleusercontent.com/pw/AP1GczO5XFO1l9gX5LNVjdbHPLciPhSt0D9PzXyUWBnWnZoCttIxL0zERl_9UmTIxWN189Hqq_0UObHPrA2NWRqoSIfMy6tTy3UHhV-QUG9v1xmezW2QXWW4POvZFJqrJq_ixr3kU47GtHeKU0VW0gSMsUcK=w1123-h629-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+
+        <!-- SLIDE 7 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Deklarasi Konflik Kepentingan: Alat Pemecat Oknum</h2>
+                <img src="https://lh3.googleusercontent.com/pw/AP1GczOGJ7gV0TN1_uqjpZoycS-RwBJgFwab2RvoFxb2gUxlDKmBJJ9BxAjb5xI4mgnx2bdr_4NSBN_uhFndP8dQViqrwW6EbD-xtibgjFXV9iTCMXsIvBqdQ-hiBvdxmAUMUGuvDrVS8gvHthOI4CD8Q7lR=w1123-h628-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+
+        <!-- SLIDE 8 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Sinergitas Tim 'Avengers' Lintas Instansi</h2>
+                <img src="https://lh3.googleusercontent.com/pw/AP1GczMoBprEkDR6nP4H1X9rtQUoStq5EStzn4jv7LMxL5Px42Phkp4Z99cSF1wV_pJnCoRm3OVSRBTdyq1uRkuG-722W-vnYmDk8YGfpidjteHZ2nD7ti9JA3-VryE9EyoHzkSajMM4rNwZPCjKMnp8W5JA=w1123-h628-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+
+        <!-- SLIDE 9 -->
+        <div class="slide">
+            <div class="text-content">
+                <h2>Lensa Kamera Tidak Bisa Diajak Kompromi</h2>
+                 <img src="https://lh3.googleusercontent.com/pw/AP1GczPPJMUCkCul4Qci7LxqkNvrCwdxB0mlUfYy_fXVGrCK8DgsZABDDy8iZBAIlO3OK4M9MN8XA9YV8Guy8tImSJFhfAZZHE46DqrwCAmPZglGB3eM7teeVeAyFLpIiWi8I0f_oROPU_nHbT-y3GSf16_9=w1123-h628-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+
+        <!-- SLIDE 10 -->
+        <div class="slide">
+            <div class="text-content">
+                <h1>Parkir Tertib, Malang Berintegritas!</h1>
+                <h2>Stop Trading in Influence!</h2>
+                <img src="https://lh3.googleusercontent.com/pw/AP1GczNU_ODJ31UH3_mhZ7fXKepzZ2yuqTYliaVA2yMk19EsoS3T_dxKBTWC8IkOKz1P7_zeUoF3ulhDjzPkMzbW7hwPuVK6XnJO4R5_t6z9s6mqbCbpbEWQym9yU16tzxZWih29QKl-gGIA-xgtheWhgKon=w1123-h630-s-no-gm?authuser=0" class="slide-image">
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-hint">⌨️ ← → / Spasi untuk navigasi</div>
+    <div class="swipe-hint">👆 Geser kiri/kanan untuk ganti slide</div>
+
+    <div class="audio-player-container">
+        <audio id="main-audio" controls preload="auto">
+            <source src="https://tarmuji41.github.io/audio-sosialisasi-sop/notebooklm_full.mp3" type="audio/mpeg">
+            Browser Anda tidak mendukung pemutar audio ini.
+        </audio>
+    </div>
+
+    <script>
+        const audio        = document.getElementById('main-audio');
+        const slides       = document.querySelectorAll('.slide');
+        const progressFill = document.getElementById('progress-fill');
+        const startOverlay = document.getElementById('start-overlay');
+        const startBtn     = document.getElementById('start-btn');
+
+        const WAKTU_PINDAH = [0, 225, 390, 510, 590, 700, 770, 890, 970, 1020];
+        let slideAktifSebelumnya = 0;
+        let navigasiManual = false;
+
+        function tampilkanSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= slides.length) index = slides.length - 1;
+            if (index === slideAktifSebelumnya) return;
+
+            slides.forEach((s, i) => s.classList.toggle('active', i === index));
+            slideAktifSebelumnya = index;
+            
+            // Reset scroll ke atas setiap ganti slide di mobile
+            slides[index].scrollTop = 0;
+        }
+
+        function hitungIndexSlide(waktu) {
+            let idx = 0;
+            for (let i = 0; i < WAKTU_PINDAH.length; i++) {
+                if (waktu >= WAKTU_PINDAH[i]) idx = i;
+                else break;
+            }
+            return idx;
+        }
+
+        audio.addEventListener('timeupdate', () => {
+            const waktu = audio.currentTime;
+            if (isFinite(audio.duration) && audio.duration > 0) {
+                const persen = (waktu / audio.duration) * 100;
+                progressFill.style.width = persen + '%';
+            }
+            if (!navigasiManual) {
+                tampilkanSlide(hitungIndexSlide(waktu));
+            }
+        });
+
+        audio.addEventListener('ended', () => {
+            audio.currentTime = 0;
+            progressFill.style.width = '0%';
+            navigasiManual = false;
+            tampilkanSlide(0);
+        });
+
+        startBtn.addEventListener('click', () => {
+            startOverlay.classList.add('hidden');
+            audio.play().catch(err => {
+                console.warn('Autoplay ditolak, silakan tekan tombol play di audio:', err);
+            });
+        });
+
+        // ===== Navigasi Keyboard =====
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'AUDIO') return;
+            const key = e.key;
+            if (key === 'ArrowRight' || key === ' ' || key === 'PageDown') {
+                e.preventDefault();
+                navigasiManual = true;
+                tampilkanSlide(slideAktifSebelumnya + 1);
+            } else if (key === 'ArrowLeft' || key === 'PageUp') {
+                e.preventDefault();
+                navigasiManual = true;
+                tampilkanSlide(slideAktifSebelumnya - 1);
+            } else if (key === 'Home') {
+                e.preventDefault();
+                navigasiManual = true;
+                tampilkanSlide(0);
+            } else if (key === 'End') {
+                e.preventDefault();
+                navigasiManual = true;
+                tampilkanSlide(slides.length - 1);
+            }
+        });
+
+        // ===== Navigasi Swipe (Sentuh) untuk Android/iOS =====
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const diffX = touchStartX - touchEndX;
+            const diffY = touchStartY - touchEndY;
+            
+            // Pastikan gerakan lebih banyak horizontal daripada vertikal (agar tidak bentrok dengan scroll)
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                navigasiManual = true;
+                if (diffX > 0) {
+                    // Swipe Kiri -> Slide Berikutnya
+                    tampilkanSlide(slideAktifSebelumnya + 1);
+                } else {
+                    // Swipe Kanan -> Slide Sebelumnya
+                    tampilkanSlide(slideAktifSebelumnya - 1);
+                }
+            }
+        }
+
+        audio.addEventListener('seeked', () => {
+            if (!navigasiManual) {
+                tampilkanSlide(hitungIndexSlide(audio.currentTime));
+            }
+        });
+    </script>
+</body>
+</html>
